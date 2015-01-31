@@ -1,0 +1,133 @@
+import module namespace jam = "http://xqdev.com/jam"
+ at "jam.xqy";
+ 
+jam:start-in("http://10.76.81.81:8080/mljam/mljam", "admin", "admin", "local"),
+jam:eval-in('{
+
+import java.io.*;
+
+   int PlusSign = 0x0C;       
+		    int MinusSign = 0x0D;     
+		    int NoSign = 0x0F;        
+		    int DropHO = 0xFF;        
+		    int GetLONibble  = 0x0F;   
+		    int UNSIGNED_BYTE = 0xff;
+		    int BITS_RIGHT = 0xf;
+       //print("Hello");
+       
+       String Format = "IBM500";
+			String FiletoRead="D:/EBCDIC/Files/CharTest.bin";
+				
+				InputStreamReader rdr;
+				InputStreamReader xxr;	
+				int ECBDICChar=0;
+      rdr = new InputStreamReader(new FileInputStream(FiletoRead), java.nio.charset.Charset.forName(Format));
+			xxr= new InputStreamReader(new FileInputStream(FiletoRead));
+			int i=1;					
+			int mainrecord_size=54;
+			int record_control_variable_size=4;
+			int loop_Record_size=25;					
+			int j=1;
+			int Value_Creator=0;
+			int x=1;
+			long comp3_values=0;
+			String com3posList="";
+			int comp3_Pos=67;
+			boolean istranNumber=false;
+			byte[] byArray = new byte[10];
+			boolean Comp3LoopStared=false;
+while((ECBDICChar = rdr.read()) != -1) 
+{		
+			int zz=xxr.read();
+        if ((i>mainrecord_size))
+        {
+          if(i<=mainrecord_size+record_control_variable_size)
+          {
+            print(zz);
+            Value_Creator=Value_Creator * 10 + zz;
+	  	 	   if(Value_Creator>0)
+             {
+             istranNumber=true;
+             for (int iterator=0;iterator<Value_Creator;iterator++)
+		 	    	{
+		 	    	int value =comp3_Pos+iterator*loop_Record_size;
+		 	    	com3posList+=","+value+",";	
+		 	    	}
+
+             }
+          }          
+        }
+        int vCheck=0;
+        if((com3posList.contains(","+Integer.toString(i)+",")))
+        {
+          if(istranNumber)
+          {
+          vCheck=1;
+          }
+        }
+        if((vCheck==1)||Comp3LoopStared)
+        {
+        byArray[x-1]= (byte)ECBDICChar;
+         x++;				
+				  Comp3LoopStared=true;
+				  if(x==10)
+          {
+          {
+           long val = 0L;
+						    boolean negative = false;
+                for (int iter = 0; iter < byArray.length; iter++)
+                {
+                 int raw = byArray[iter] &amp; UNSIGNED_BYTE;
+                  int digitA = raw >> 4;
+						        int digitB = raw &amp; BITS_RIGHT;
+                    if (digitA < 10) {
+						            val *= 10L;
+						            val += (long) digitA;
+
+						        } else if (digitA == 11 || digitA == 13) { 
+						            negative = true;
+						        }
+                     if (digitB < 10) {
+						            val *= 10L;
+						            val += (long) digitB;
+
+						        } else if (digitB == 11 || digitB == 13) {
+						            negative = true;
+						        }                    
+                }
+                if (negative)
+						        val = -val;
+						    comp3_values= val;
+          }
+          x=1;
+					print(comp3_values);
+					Comp3LoopStared=false;
+          }
+        }
+        if((i<mainrecord_size+1)||(i>mainrecord_size+record_control_variable_size))
+        {
+          if(!Comp3LoopStared)
+          {
+            print((char)ECBDICChar);
+          }
+        }
+          if (j>=mainrecord_size+(Value_Creator*loop_Record_size)+record_control_variable_size)
+          {
+		 	  		Value_Creator=0;
+		 	  		i=1;
+		 	  		j=1;
+		 	  		istranNumber=false;
+		 	  		
+		 	  	}
+		 	
+		 	else{
+		 	  	 i++;
+		 	  	 j++;		 	  	
+		 	  	}
+           
+        //print("Corect");
+        
+}
+       } ',"local"),
+jam:get-stdout-in("local"),
+jam:end-in ("local")
